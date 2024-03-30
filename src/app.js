@@ -1,89 +1,85 @@
-const express = require('express')
+// Import required modules
+const express = require("express");
+const port = process.env.PORT || 3000; // Get port from environment or use 3000
+const hbs = require("hbs"); // For rendering Handlebars templates
+const path = require("path"); // For path manipulation
+const geocode = require("./utils/geocode"); // Util for geocoding addresses
+const forecast = require("./utils/forecast"); // Util for fetching weather forecasts
 
-// it use process.env.port value to run project on heroku
-// if value equal null will use 3000 to run project on localhost
-const port = process.env.PORT || 3000
+// Create Express app
+const app = express();
 
-//handlebars it's npm package to use it as the default view engine & using partials
-const hbs = require('hbs')
+// Configure views for Handlebars
+const publicDirectoryPath = path.join(__dirname, "../public"); // Path for static assets
+const viewsPath = path.join(__dirname, "../templates/views"); // Path for template views
+const partialsPath = path.join(__dirname, "../templates/partials"); // Path for partial views
+app.set("view engine", "hbs");
+app.set("views", viewsPath);
+hbs.registerPartials(partialsPath);
 
-//core node module
-const path = require('path')
+// Serve static files from public directory
+app.use(express.static(publicDirectoryPath));
 
-const geocode = require('./utils/geocode')
-const forecast = require('./utils/forecast')
+// Routing
 
-//it's a configuration for express to use its function and method
-const app = express()
+// Home route (root path)
+app.get("", (req, res) => {
+  res.render("index", {
+    title: "Weather",
+    name: "Mohamed Fakhr El-Din",
+  });
+});
 
-// Define paths for Express config
-const publicDirectoryPath = path.join(__dirname, '../public')
-const viewsPath = path.join(__dirname, '../templates/views')
-const partialsPath = path.join(__dirname, '../templates/partials')
+// About route
+app.get("/about", (req, res) => {
+  res.render("about", {
+    title: "About Me",
+    name: "Mohamed Fakhr El-Din",
+  });
+});
 
-// Setup handlebars engine and views location
-app.set('view engine', 'hbs')
-app.set('views', viewsPath)
-hbs.registerPartials(partialsPath)
+// Weather route
+app.get("/weather", (req, res) => {
+  if (!req.query.address) {
+    // Address is required, send error response
+    return res.send({ error: "You must provide an address!" });
+  }
 
-// Setup static directory to serve
-app.use(express.static(publicDirectoryPath))
+  geocode(
+    req.query.address,
+    (error, { latitude, longitude, location } = {}) => {
+      if (error) {
+        // Handle geocoding errors
+        return res.send({ error });
+      }
 
-app.get('', (req, res) => {
-    res.render('index', {
-        title: 'Weather',
-        name: 'Mohamed Fakhr El-Din'
-    })
-})
-
-app.get('/about', (req, res) => {
-    res.render('about', {
-        title: 'About Me',
-        name: 'Mohamed Fakhr El-Din'
-    })
-})
-
-app.get('/weather', (req, res) => {
-    //this validation to make sure there is an address sent it in request
-    //by access request.query.address of route weather
-    //req.query that helps you to handle requests in express
-    if (!req.query.address) {
-
-        // send is a method used with responce to send something back to requester
-        return res.send({
-            error: 'You must provide an address!'
-        })
-    }
-
-    // get address from request 
-    geocode(req.query.address, (error, { latitude, longitude, location } = {}) => {
+      forecast(latitude, longitude, (error, forecastData) => {
         if (error) {
-            return res.send({ error })
+          // Handle forecast errors
+          return res.send({ error });
         }
 
-        forecast(latitude, longitude, (error, forecastData) => {
-            if (error) {
-                return res.send({ error })
-            }
+        // Send weather forecast data
+        res.send({
+          forecast: forecastData,
+          location,
+          address: req.query.address,
+        });
+      });
+    }
+  );
+});
 
-            res.send({
-                forecast: forecastData,
-                location,
-                address: req.query.address
-            })
-        })
-    })
-})
+// Catch-all route for 404 errors
+app.get("*", (req, res) => {
+  res.render("404", {
+    title: "404",
+    name: "Mohamed Fakhr El-Din",
+    errorMessage: "Page not found.",
+  });
+});
 
-//404 page
-app.get('*', (req, res) => {
-    res.render('404', {
-        title: '404',
-        name: 'Mohamed Fakhr El-Din',
-        errorMessage: 'Page not found.'
-    })
-})
-
+// Start the server
 app.listen(port, () => {
-    console.log('Server is up on port ' + port)
-})
+  console.log("Server is up on port " + port);
+});
