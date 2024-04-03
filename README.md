@@ -2,7 +2,7 @@
 
 ## Description
 
-This is a Node.js application that fetches weather data for a given location using Mapbox Geocoding and OpenWeatherMap APIs.
+This is a Node.js application with Express.js framework that fetches weather data for a given location using Mapbox Geocoding and OpenWeatherMap APIs.
 It allows users to search for a location and displays the current weather description, temperature, and high/low for the day.
 
 ## Features
